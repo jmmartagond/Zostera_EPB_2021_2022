@@ -1,0 +1,142 @@
+
+var imports_planet= require('users/martagond/Punta_Banda:PB_Planet');
+var imports_MS= require('users/martagond/Punta_Banda:PB_MS_12-2021');
+var imports_NIR= require('users/martagond/Punta_Banda:PB_NIR_05-2022');
+var imports_wtr_poly= require('users/martagond/Punta_Banda:PB_Planet_Polígono_de_Agua');
+
+// Coleccion de productos de zostera de 2022
+var zostera_total_2022 = ee.ImageCollection([
+  imports_planet.suma_zostera_2022_Pl,
+  imports_NIR.nir_0522_clip_class_RForest_layer
+  ]);
+
+var suma_zostera_t_2022 = zostera_total_2022.sum();
+// print(suma_zostera_t_2022)
+
+// Area de las probabilidades
+// var areas_prob_2022 = ee.Image.pixelArea().addBands(suma_zostera_t_2022).reduceRegion({
+//   reducer: ee.Reducer.sum().group({
+//     groupField: 1,
+//     groupName: 'classification'
+//   }),
+//   geometry:imports_wtr_poly.max_poly_B8,
+//   scale:3,
+//   maxPixels: 1e12
+// });
+
+//Extraer el area de las probabilidades y convertirlo a hectareas 
+// var lista_prob_areas_2022 = ee.List(areas_prob_2022.get('groups')).map(function(item) {
+//   var areaDict = ee.Dictionary(item)
+//   var classNumber = ee.Number(areaDict.get('classification')).format()
+//   var area = ee.Number(
+//     areaDict.get('sum')).divide(1e4)
+//   return ee.List([classNumber, area])
+// });
+ 
+// var resultado_prob_areas_2022 = ee.Dictionary(lista_prob_areas_2022.flatten());
+// print(resultado_prob_areas_2022);
+
+// Map.addLayer(suma_zostera_t_2022, {palette: [ 'green']}, 'Parche de Zostera TOTAL 2022');
+
+// suma_zostera_t_2022 = suma_zostera_t_2022.toByte();
+// Export.image.toDrive({
+//   image: suma_zostera_t_2022,
+//   description: 'Probabilidad_Zostera_Total_2022',
+//   folder:'Productos_Finales',
+//   region:imports_wtr_poly.max_poly_B8,
+//   scale:3,
+//   crs:'EPSG:32611',
+//   maxPixels:1e12
+// });
+
+// Enmascarar 2022 con la capa de EW 2008
+var im_EW_2008 = EW_2008.reduceToImage({
+  properties:['GRIDCODE'],
+  reducer: ee.Reducer.sum()
+})
+var suma_zostera_t_2022_masked = suma_zostera_t_2022.updateMask(suma_zostera_t_2022.neq(im_EW_2008));
+// Map.addLayer(suma_zostera_t_2022_masked, {palette: [ 'green']}, 'ZM_2022_Enmascarado', false);
+
+// suma_zostera_t_2022_masked = suma_zostera_t_2022_masked.toByte();
+// Export.image.toDrive({
+//   image: suma_zostera_t_2022_masked,
+//   description: 'Probabilidad_Zostera_Total_2022_Enmascarada',
+//   folder:'Productos_Finales',
+//   region:imports_wtr_poly.max_poly_B8,
+//   scale:3,
+//   crs:'EPSG:32611',
+//   maxPixels:1e12
+// });
+
+var areas_prob_2022_mask = ee.Image.pixelArea().addBands(suma_zostera_t_2022_masked).reduceRegion({
+  reducer: ee.Reducer.sum().group({
+    groupField: 1,
+    groupName: 'classification'
+  }),
+  geometry:imports_wtr_poly.max_poly_B8,
+  scale:3,
+  maxPixels: 1e12
+});
+
+//Extraer el area de las probabilidades y convertirlo a hectareas 
+var lista_prob_areas_2022_mask = ee.List(areas_prob_2022_mask.get('groups')).map(function(item) {
+  var areaDict = ee.Dictionary(item)
+  var classNumber = ee.Number(areaDict.get('classification')).format()
+  var area = ee.Number(
+    areaDict.get('sum')).divide(1e4)
+  return ee.List([classNumber, area])
+});
+ 
+var resultado_prob_areas_2022_mask = ee.Dictionary(lista_prob_areas_2022_mask.flatten());
+print(resultado_prob_areas_2022_mask);
+
+
+
+// Colección de Zostera Total 2021 - 2022
+var zostera_total = ee.ImageCollection([
+  imports_planet.suma_zostera_t_Pl,
+  imports_NIR.NIR031221_clip_class_RForest_layer,
+  imports_NIR.nir_0522_clip_class_RForest_layer,
+  imports_MS.MS_0212_clip_class_RForest_layer
+  ]);
+
+var suma_zm_total = zostera_total.sum();
+
+suma_zm_total = suma_zm_total.toByte();
+
+// Area de las probabilidades
+var areas_prob_total = ee.Image.pixelArea().addBands(suma_zm_total).reduceRegion({
+  reducer: ee.Reducer.sum().group({
+    groupField: 1,
+    groupName: 'classification'
+  }),
+  geometry:imports_wtr_poly.max_poly_B8,
+  scale:3,
+  maxPixels: 1e12
+});
+
+//Extraer el area de las probabilidades y convertirlo a hectareas 
+var lista_prob_areas_totales = ee.List(areas_prob_total.get('groups')).map(function(item) {
+  var areaDict = ee.Dictionary(item)
+  var classNumber = ee.Number(areaDict.get('classification')).format()
+  var area = ee.Number(
+    areaDict.get('sum')).divide(1e4)
+  return ee.List([classNumber, area])
+});
+ 
+var resultado_areas_totales = ee.Dictionary(lista_prob_areas_totales.flatten());
+// print('El area de las probabilidades de Zostera es', resultado_areas_totales);
+
+// Map.addLayer(zostera_total, {palette: [ 'green']}, ' Zostera TOTAL');
+
+
+
+// Export.image.toDrive({
+//   image: suma_zm_total,
+//   description: 'Probabilidad_Zostera_Total',
+//   folder:'Productos_Finales',
+//   region:imports_wtr_poly.max_poly_B8,
+//   scale:3,
+//   crs:'EPSG:32611',
+//   maxPixels:1e12
+// });
